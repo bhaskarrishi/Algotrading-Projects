@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TradingView Alerts Dashboard</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .alert-box {
+            background: #f3f3f3;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .timestamp { color: gray; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+<h1>TradingView Alerts Dashboard</h1>
+
+{% if alerts %}
+    {% for alert in alerts %}
+        <div class="alert-box">
+            <strong>{{ alert.message }}</strong><br>
+            <span class="timestamp">{{ alert.timestamp }}</span>
+        </div>
+    {% endfor %}
+{% else %}
+    <p>No alerts received yet.</p>
+{% endif %}
+
+</body>
+</html>
