@@ -1,0 +1,227 @@
+{
+  "configurations": {
+    "conservative": {
+      "description": "Lower risk with fewer signals but higher quality",
+      "settings": {
+        "emaFast": 9,
+        "emaSlow": 21,
+        "emaFilter": 50,
+        "emaLong": 200,
+        "macdFast": 12,
+        "macdSlow": 26,
+        "macdSignal": 9,
+        "rsiLength": 14,
+        "rsiOverbought": 70,
+        "rsiOversold": 30,
+        "adxLength": 14,
+        "adxThreshold": 30,
+        "adxStrongTrend": 45,
+        "minConfirmations": 3,
+        "useMultiTimeframe": true,
+        "requireTrendAlignment": true
+      },
+      "recommended_timeframes": ["1H", "4H", "1D"],
+      "best_for": "Swing trading, capturing major trends"
+    },
+    "moderate": {
+      "description": "Balanced approach with good signal quality",
+      "settings": {
+        "emaFast": 9,
+        "emaSlow": 21,
+        "emaFilter": 50,
+        "emaLong": 200,
+        "macdFast": 12,
+        "macdSlow": 26,
+        "macdSignal": 9,
+        "rsiLength": 14,
+        "rsiOverbought": 70,
+        "rsiOversold": 30,
+        "adxLength": 14,
+        "adxThreshold": 25,
+        "adxStrongTrend": 40,
+        "minConfirmations": 2,
+        "useMultiTimeframe": true,
+        "requireTrendAlignment": false
+      },
+      "recommended_timeframes": ["15m", "1H", "4H"],
+      "best_for": "Day trading and swing trading"
+    },
+    "aggressive": {
+      "description": "More frequent signals with higher risk",
+      "settings": {
+        "emaFast": 9,
+        "emaSlow": 21,
+        "emaFilter": 50,
+        "emaLong": 200,
+        "macdFast": 12,
+        "macdSlow": 26,
+        "macdSignal": 9,
+        "rsiLength": 14,
+        "rsiOverbought": 75,
+        "rsiOversold": 25,
+        "adxLength": 14,
+        "adxThreshold": 20,
+        "adxStrongTrend": 35,
+        "minConfirmations": 1,
+        "useMultiTimeframe": false,
+        "requireTrendAlignment": false
+      },
+      "recommended_timeframes": ["5m", "15m", "1H"],
+      "best_for": "Scalping and intraday trading"
+    },
+    "crypto_volatile": {
+      "description": "Optimized for highly volatile cryptocurrency markets",
+      "settings": {
+        "emaFast": 8,
+        "emaSlow": 21,
+        "emaFilter": 55,
+        "emaLong": 200,
+        "macdFast": 12,
+        "macdSlow": 26,
+        "macdSignal": 9,
+        "rsiLength": 14,
+        "rsiOverbought": 75,
+        "rsiOversold": 25,
+        "adxLength": 14,
+        "adxThreshold": 28,
+        "adxStrongTrend": 45,
+        "minConfirmations": 3,
+        "useMultiTimeframe": true,
+        "requireTrendAlignment": true
+      },
+      "recommended_timeframes": ["15m", "1H", "4H"],
+      "best_for": "Cryptocurrency trading with high volatility"
+    },
+    "forex_stable": {
+      "description": "Optimized for forex pairs with lower volatility",
+      "settings": {
+        "emaFast": 10,
+        "emaSlow": 20,
+        "emaFilter": 50,
+        "emaLong": 200,
+        "macdFast": 12,
+        "macdSlow": 26,
+        "macdSignal": 9,
+        "rsiLength": 14,
+        "rsiOverbought": 70,
+        "rsiOversold": 30,
+        "adxLength": 14,
+        "adxThreshold": 23,
+        "adxStrongTrend": 38,
+        "minConfirmations": 2,
+        "useMultiTimeframe": true,
+        "requireTrendAlignment": true
+      },
+      "recommended_timeframes": ["1H", "4H", "1D"],
+      "best_for": "Major forex pairs (EUR/USD, GBP/USD, etc.)"
+    },
+    "stocks_daily": {
+      "description": "Optimized for daily stock trading",
+      "settings": {
+        "emaFast": 9,
+        "emaSlow": 21,
+        "emaFilter": 50,
+        "emaLong": 200,
+        "macdFast": 12,
+        "macdSlow": 26,
+        "macdSignal": 9,
+        "rsiLength": 14,
+        "rsiOverbought": 70,
+        "rsiOversold": 30,
+        "adxLength": 14,
+        "adxThreshold": 25,
+        "adxStrongTrend": 40,
+        "minConfirmations": 2,
+        "useMultiTimeframe": true,
+        "requireTrendAlignment": true
+      },
+      "recommended_timeframes": ["1H", "4H", "1D"],
+      "best_for": "Stock market with daily charts"
+    }
+  },
+  "usage_notes": {
+    "how_to_use": "Copy the desired configuration settings into TradingView strategy inputs",
+    "customization": "Feel free to adjust values based on your risk tolerance and trading style",
+    "testing": "Always backtest configurations on historical data before live trading",
+    "optimization": "Monitor performance and adjust parameters based on market conditions"
+  },
+  "parameter_explanations": {
+    "emaFast": "Fast EMA period for quick trend changes (lower = more sensitive)",
+    "emaSlow": "Slow EMA period for smoother trend (higher = less noise)",
+    "emaFilter": "Trend filter to avoid counter-trend trades",
+    "emaLong": "Long-term trend indicator (typically 200)",
+    "macdFast": "MACD fast length (standard: 12)",
+    "macdSlow": "MACD slow length (standard: 26)",
+    "macdSignal": "MACD signal line length (standard: 9)",
+    "rsiLength": "RSI calculation period (standard: 14)",
+    "rsiOverbought": "RSI level considered overbought (70-80)",
+    "rsiOversold": "RSI level considered oversold (20-30)",
+    "adxLength": "ADX calculation period (standard: 14)",
+    "adxThreshold": "ADX value separating trending from choppy (20-30)",
+    "adxStrongTrend": "ADX value indicating strong trend (35-50)",
+    "minConfirmations": "Minimum indicators that must agree (1-5)",
+    "useMultiTimeframe": "Require higher timeframe confirmation",
+    "requireTrendAlignment": "Require all timeframes to align"
+  },
+  "risk_management_templates": {
+    "conservative": {
+      "position_size_percent": 1,
+      "stop_loss_atr_multiplier": 2.5,
+      "take_profit_ratio": 2.5,
+      "max_trades_per_day": 3,
+      "max_daily_loss_percent": 3
+    },
+    "moderate": {
+      "position_size_percent": 2,
+      "stop_loss_atr_multiplier": 2.0,
+      "take_profit_ratio": 2.0,
+      "max_trades_per_day": 5,
+      "max_daily_loss_percent": 5
+    },
+    "aggressive": {
+      "position_size_percent": 3,
+      "stop_loss_atr_multiplier": 1.5,
+      "take_profit_ratio": 1.5,
+      "max_trades_per_day": 10,
+      "max_daily_loss_percent": 7
+    }
+  },
+  "market_specific_tips": {
+    "crypto": {
+      "note": "High volatility requires wider stops and more confirmations",
+      "recommended_config": "crypto_volatile",
+      "additional_considerations": [
+        "Consider weekend price gaps",
+        "Watch for news-driven moves",
+        "Use higher ADX threshold (28-30)"
+      ]
+    },
+    "forex": {
+      "note": "Lower volatility, tighter spreads, good for systematic trading",
+      "recommended_config": "forex_stable",
+      "additional_considerations": [
+        "Consider session times (London, NY, Asian)",
+        "Watch for economic news releases",
+        "Respect support/resistance levels"
+      ]
+    },
+    "stocks": {
+      "note": "Market hours only, gap risk, sector correlation",
+      "recommended_config": "stocks_daily",
+      "additional_considerations": [
+        "Avoid trading during first/last 15 minutes",
+        "Watch for earnings announcements",
+        "Consider market-wide trends (SPY correlation)"
+      ]
+    },
+    "indices": {
+      "note": "Lower volatility than individual stocks, trending behavior",
+      "recommended_config": "moderate",
+      "additional_considerations": [
+        "Good for trend following",
+        "Lower risk than individual stocks",
+        "Consider macro economic factors"
+      ]
+    }
+  }
+}
