@@ -1,0 +1,321 @@
+//@version=5
+strategy("Adaptive Multi-Timeframe Momentum Strategy", 
+         shorttitle="AMTM", 
+         overlay=true, 
+         initial_capital=10000,
+         default_qty_type=strategy.percent_of_equity,
+         default_qty_value=100,
+         commission_type=strategy.commission.percent,
+         commission_value=0.1)
+
+// ============================================================================
+// INPUT PARAMETERS
+// ============================================================================
+
+// Timeframe Selection
+tf1 = input.timeframe("15", "Timeframe 1 (Lower)", group="Timeframes")
+tf2 = input.timeframe("60", "Timeframe 2 (Medium)", group="Timeframes")
+tf3 = input.timeframe("240", "Timeframe 3 (Higher)", group="Timeframes")
+
+// EMA Settings
+emaFast = input.int(9, "EMA Fast", minval=1, group="EMA Settings")
+emaSlow = input.int(21, "EMA Slow", minval=1, group="EMA Settings")
+emaFilter = input.int(50, "EMA Trend Filter", minval=1, group="EMA Settings")
+emaLong = input.int(200, "EMA Long-term", minval=1, group="EMA Settings")
+
+// MACD Settings
+macdFast = input.int(12, "MACD Fast Length", minval=1, group="MACD Settings")
+macdSlow = input.int(26, "MACD Slow Length", minval=1, group="MACD Settings")
+macdSignal = input.int(9, "MACD Signal Length", minval=1, group="MACD Settings")
+
+// RSI Settings
+rsiLength = input.int(14, "RSI Length", minval=1, group="RSI Settings")
+rsiOverbought = input.int(70, "RSI Overbought", minval=50, maxval=100, group="RSI Settings")
+rsiOversold = input.int(30, "RSI Oversold", minval=0, maxval=50, group="RSI Settings")
+
+// ADX Settings (for market regime detection)
+adxLength = input.int(14, "ADX Length", minval=1, group="ADX Settings")
+adxThreshold = input.int(25, "ADX Trend Threshold", minval=1, group="ADX Settings")
+adxStrongTrend = input.int(40, "ADX Strong Trend", minval=1, group="ADX Settings")
+
+// Signal Filtering
+minConfirmations = input.int(2, "Minimum Confirmations", minval=1, maxval=5, group="Signal Filtering")
+useMultiTimeframe = input.bool(true, "Use Multi-Timeframe Confirmation", group="Signal Filtering")
+requireTrendAlignment = input.bool(true, "Require Trend Alignment", group="Signal Filtering")
+
+// ============================================================================
+// INDICATOR CALCULATIONS - CURRENT TIMEFRAME
+// ============================================================================
+
+// EMA Calculations
+ema_fast = ta.ema(close, emaFast)
+ema_slow = ta.ema(close, emaSlow)
+ema_filter = ta.ema(close, emaFilter)
+ema_long = ta.ema(close, emaLong)
+
+// MACD Calculations
+[macdLine, signalLine, histLine] = ta.macd(close, macdFast, macdSlow, macdSignal)
+
+// RSI Calculations
+rsi = ta.rsi(close, rsiLength)
+
+// ADX Calculations for Market Regime Detection
+[diPlus, diMinus, adx] = ta.dmi(adxLength, adxLength)
+
+// ============================================================================
+// MARKET REGIME DETECTION
+// ============================================================================
+
+// Determine if market is trending or choppy
+isTrending = adx > adxThreshold
+isStrongTrend = adx > adxStrongTrend
+isChoppy = adx <= adxThreshold
+
+// Determine trend direction
+isBullishTrend = diPlus > diMinus and ta.ema(close, 20) > ta.ema(close, 50)
+isBearishTrend = diMinus > diPlus and ta.ema(close, 20) < ta.ema(close, 50)
+
+// ============================================================================
+// MULTI-TIMEFRAME CALCULATIONS
+// ============================================================================
+
+// Function to get trend direction for a timeframe
+getTrendDirection(tf) =>
+    ema_fast_tf = request.security(syminfo.tickerid, tf, ta.ema(close, emaFast))
+    ema_slow_tf = request.security(syminfo.tickerid, tf, ta.ema(close, emaSlow))
+    adx_tf = request.security(syminfo.tickerid, tf, ta.dmi(adxLength, adxLength)[2])
+    
+    bullish = ema_fast_tf > ema_slow_tf and adx_tf > adxThreshold
+    bearish = ema_fast_tf < ema_slow_tf and adx_tf > adxThreshold
+    [bullish, bearish, adx_tf]
+
+// Get trends for all timeframes
+[tf1_bull, tf1_bear, tf1_adx] = getTrendDirection(tf1)
+[tf2_bull, tf2_bear, tf2_adx] = getTrendDirection(tf2)
+[tf3_bull, tf3_bear, tf3_adx] = getTrendDirection(tf3)
+
+// Multi-timeframe confirmation
+mtf_bullish = tf1_bull and tf2_bull and tf3_bull
+mtf_bearish = tf1_bear and tf2_bear and tf3_bear
+mtf_aligned_up = (tf1_bull and tf2_bull) or (tf2_bull and tf3_bull) or (tf1_bull and tf3_bull)
+mtf_aligned_down = (tf1_bear and tf2_bear) or (tf2_bear and tf3_bear) or (tf1_bear and tf3_bear)
+
+// ============================================================================
+// SIGNAL GENERATION - ADAPTIVE BASED ON MARKET REGIME
+// ============================================================================
+
+// --- TRENDING MARKET SIGNALS ---
+// For trending markets, use EMA crossovers with MACD and trend confirmation
+trend_long_signal = isTrending and
+                     ta.crossover(ema_fast, ema_slow) and
+                     close > ema_filter and
+                     macdLine > signalLine and
+                     diPlus > diMinus
+
+trend_short_signal = isTrending and
+                      ta.crossunder(ema_fast, ema_slow) and
+                      close < ema_filter and
+                      macdLine < signalLine and
+                      diMinus > diPlus
+
+// --- CHOPPY MARKET SIGNALS ---
+// For choppy markets, use RSI mean reversion with tight stops
+choppy_long_signal = isChoppy and
+                      ta.crossover(rsi, rsiOversold) and
+                      rsi < 40 and
+                      close > ema_fast
+
+choppy_short_signal = isChoppy and
+                       ta.crossunder(rsi, rsiOverbought) and
+                       rsi > 60 and
+                       close < ema_fast
+
+// ============================================================================
+// CONFIRMATION SYSTEM
+// ============================================================================
+
+// Count confirmations for long signals
+long_confirmations = 0
+if ema_fast > ema_slow
+    long_confirmations := long_confirmations + 1
+if macdLine > signalLine
+    long_confirmations := long_confirmations + 1
+if rsi > 50 and rsi < rsiOverbought
+    long_confirmations := long_confirmations + 1
+if close > ema_filter
+    long_confirmations := long_confirmations + 1
+if diPlus > diMinus
+    long_confirmations := long_confirmations + 1
+
+// Count confirmations for short signals
+short_confirmations = 0
+if ema_fast < ema_slow
+    short_confirmations := short_confirmations + 1
+if macdLine < signalLine
+    short_confirmations := short_confirmations + 1
+if rsi < 50 and rsi > rsiOversold
+    short_confirmations := short_confirmations + 1
+if close < ema_filter
+    short_confirmations := short_confirmations + 1
+if diMinus > diPlus
+    short_confirmations := short_confirmations + 1
+
+// ============================================================================
+// FINAL ENTRY SIGNALS WITH FILTERING
+// ============================================================================
+
+// Apply confirmations and multi-timeframe filters
+long_entry = false
+short_entry = false
+
+if isTrending
+    // Trending market logic
+    long_entry := trend_long_signal and long_confirmations >= minConfirmations
+    short_entry := trend_short_signal and short_confirmations >= minConfirmations
+    
+    if useMultiTimeframe and requireTrendAlignment
+        long_entry := long_entry and mtf_aligned_up
+        short_entry := short_entry and mtf_aligned_down
+else
+    // Choppy market logic - more conservative
+    long_entry := choppy_long_signal and long_confirmations >= (minConfirmations + 1)
+    short_entry := choppy_short_signal and short_confirmations >= (minConfirmations + 1)
+
+// Additional noise filter: avoid signals during extreme volatility
+atr = ta.atr(14)
+atr_threshold = ta.sma(atr, 20) * 1.5
+extreme_volatility = atr > atr_threshold
+
+long_entry := long_entry and not extreme_volatility
+short_entry := short_entry and not extreme_volatility
+
+// ============================================================================
+// EXIT LOGIC
+// ============================================================================
+
+// Dynamic exits based on market regime
+exit_long_trending = ta.crossunder(ema_fast, ema_slow) or 
+                      macdLine < signalLine or
+                      rsi > rsiOverbought
+
+exit_short_trending = ta.crossover(ema_fast, ema_slow) or
+                       macdLine > signalLine or
+                       rsi < rsiOversold
+
+exit_long_choppy = rsi > rsiOverbought or
+                    close < ema_fast
+
+exit_short_choppy = rsi < rsiOversold or
+                     close > ema_fast
+
+// Apply appropriate exit based on regime
+exit_long = isTrending ? exit_long_trending : exit_long_choppy
+exit_short = isTrending ? exit_short_trending : exit_short_choppy
+
+// ============================================================================
+// STRATEGY EXECUTION
+// ============================================================================
+
+if long_entry
+    strategy.entry("Long", strategy.long, comment="Long Entry")
+    
+if short_entry
+    strategy.entry("Short", strategy.short, comment="Short Entry")
+
+if exit_long
+    strategy.close("Long", comment="Exit Long")
+    
+if exit_short
+    strategy.close("Short", comment="Exit Short")
+
+// ============================================================================
+// VISUALIZATION
+// ============================================================================
+
+// Plot EMAs
+plot(ema_fast, "EMA Fast", color=color.new(color.green, 0), linewidth=2)
+plot(ema_slow, "EMA Slow", color=color.new(color.red, 0), linewidth=2)
+plot(ema_filter, "EMA Filter", color=color.new(color.blue, 50), linewidth=1)
+plot(ema_long, "EMA Long", color=color.new(color.orange, 70), linewidth=1)
+
+// Background color for market regime
+bgcolor(isTrending ? color.new(color.green, 95) : color.new(color.orange, 95), title="Market Regime")
+bgcolor(isStrongTrend ? color.new(color.blue, 95) : na, title="Strong Trend")
+
+// Plot entry signals
+plotshape(long_entry, "Long Signal", shape.triangleup, location.belowbar, 
+          color.new(color.green, 0), size=size.small)
+plotshape(short_entry, "Short Signal", shape.triangledown, location.abovebar, 
+          color.new(color.red, 0), size=size.small)
+
+// ============================================================================
+// ALERTS
+// ============================================================================
+
+// Alert conditions
+alertcondition(long_entry, title="Long Entry Alert", 
+               message='{"action": "buy", "symbol": "{{ticker}}", "price": {{close}}, "regime": "' + 
+               (isTrending ? 'trending' : 'choppy') + '", "confirmations": ' + str.tostring(long_confirmations) + '}')
+
+alertcondition(short_entry, title="Short Entry Alert", 
+               message='{"action": "sell", "symbol": "{{ticker}}", "price": {{close}}, "regime": "' + 
+               (isTrending ? 'trending' : 'choppy') + '", "confirmations": ' + str.tostring(short_confirmations) + '}')
+
+alertcondition(exit_long, title="Exit Long Alert", 
+               message='{"action": "exit_long", "symbol": "{{ticker}}", "price": {{close}}}')
+
+alertcondition(exit_short, title="Exit Short Alert", 
+               message='{"action": "exit_short", "symbol": "{{ticker}}", "price": {{close}}}')
+
+// ============================================================================
+// DASHBOARD - Display key metrics
+// ============================================================================
+
+var table dashboard = table.new(position.top_right, 2, 8, 
+                                border_width=1, 
+                                border_color=color.gray, 
+                                frame_color=color.gray)
+
+if barstate.islast
+    // Header
+    table.cell(dashboard, 0, 0, "Metric", bgcolor=color.new(color.gray, 80), text_color=color.white)
+    table.cell(dashboard, 1, 0, "Value", bgcolor=color.new(color.gray, 80), text_color=color.white)
+    
+    // Market Regime
+    regime_text = isStrongTrend ? "Strong Trend" : (isTrending ? "Trending" : "Choppy")
+    regime_color = isStrongTrend ? color.new(color.blue, 80) : (isTrending ? color.new(color.green, 80) : color.new(color.orange, 80))
+    table.cell(dashboard, 0, 1, "Market Regime", bgcolor=color.new(color.gray, 90))
+    table.cell(dashboard, 1, 1, regime_text, bgcolor=regime_color)
+    
+    // ADX Value
+    table.cell(dashboard, 0, 2, "ADX", bgcolor=color.new(color.gray, 90))
+    table.cell(dashboard, 1, 2, str.tostring(math.round(adx, 2)), 
+               bgcolor=adx > adxStrongTrend ? color.new(color.blue, 80) : (adx > adxThreshold ? color.new(color.green, 80) : color.new(color.orange, 80)))
+    
+    // RSI Value
+    table.cell(dashboard, 0, 3, "RSI", bgcolor=color.new(color.gray, 90))
+    rsi_color = rsi > rsiOverbought ? color.new(color.red, 80) : (rsi < rsiOversold ? color.new(color.green, 80) : color.new(color.gray, 80))
+    table.cell(dashboard, 1, 3, str.tostring(math.round(rsi, 2)), bgcolor=rsi_color)
+    
+    // MACD Status
+    table.cell(dashboard, 0, 4, "MACD", bgcolor=color.new(color.gray, 90))
+    macd_status = macdLine > signalLine ? "Bullish" : "Bearish"
+    macd_color = macdLine > signalLine ? color.new(color.green, 80) : color.new(color.red, 80)
+    table.cell(dashboard, 1, 4, macd_status, bgcolor=macd_color)
+    
+    // EMA Trend
+    table.cell(dashboard, 0, 5, "EMA Trend", bgcolor=color.new(color.gray, 90))
+    ema_status = ema_fast > ema_slow ? "Bullish" : "Bearish"
+    ema_color = ema_fast > ema_slow ? color.new(color.green, 80) : color.new(color.red, 80)
+    table.cell(dashboard, 1, 5, ema_status, bgcolor=ema_color)
+    
+    // Multi-Timeframe
+    table.cell(dashboard, 0, 6, "MTF Status", bgcolor=color.new(color.gray, 90))
+    mtf_status = mtf_bullish ? "All Bullish" : (mtf_bearish ? "All Bearish" : (mtf_aligned_up ? "Mostly Up" : (mtf_aligned_down ? "Mostly Down" : "Mixed")))
+    mtf_color = mtf_bullish ? color.new(color.green, 80) : (mtf_bearish ? color.new(color.red, 80) : color.new(color.gray, 80))
+    table.cell(dashboard, 1, 6, mtf_status, bgcolor=mtf_color)
+    
+    // Long Confirmations
+    table.cell(dashboard, 0, 7, "Long Confirms", bgcolor=color.new(color.gray, 90))
+    table.cell(dashboard, 1, 7, str.tostring(long_confirmations) + "/5", 
+               bgcolor=long_confirmations >= minConfirmations ? color.new(color.green, 80) : color.new(color.gray, 80))
