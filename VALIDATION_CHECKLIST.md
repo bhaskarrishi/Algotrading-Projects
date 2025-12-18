@@ -206,27 +206,187 @@ Use this checklist to validate the Adaptive Multi-Timeframe Momentum Strategy be
 - [ ] No false triangle artifacts
 
 ### Dashboard
-- [ ] All 8 rows display correctly
+- [ ] All 13 rows display correctly (v2.0 has 13 vs 8)
 - [ ] Market regime shows current state
 - [ ] All indicator values update in real-time
 - [ ] Colors reflect indicator conditions
 - [ ] Easy to read and understand
 
+## ✓ Risk Management Features (NEW in v2.0)
+
+### Trade Direction Control
+- [ ] Trade Direction input available in settings
+- [ ] "Both" option generates long and short signals
+- [ ] "Long Only" blocks all short entry signals
+- [ ] "Short Only" blocks all long entry signals
+- [ ] Direction filter works correctly with all other filters
+- [ ] Dashboard shows correct signal confirmations for allowed direction
+
+### Position Sizing Inputs
+- [ ] Enable Pyramiding toggle works
+- [ ] Initial Position Size % input accepts 1-100
+- [ ] Scale-In Size % input accepts 1-100
+- [ ] Max Scale-In Count input accepts 0-5
+- [ ] All position size inputs display correctly
+
+### Stop Loss Configuration
+- [ ] Stop Loss Type input shows 3 options
+- [ ] "ATR Based" option available
+- [ ] "Fixed Percentage" option available
+- [ ] "Previous Swing" option available
+- [ ] Stop Loss ATR Multiplier input works (0.5-10)
+- [ ] Stop Loss Percentage input works (0.1-20%)
+- [ ] Enable Trailing Stop toggle works
+- [ ] Trailing Stop ATR Multiplier input works (0.5-10)
+
+### Take Profit Configuration
+- [ ] Enable Take Profit toggle works
+- [ ] TP Method input shows 3 options
+- [ ] "ATR Based" option available
+- [ ] "Risk-Reward Ratio" option available
+- [ ] "Fixed Percentage" option available
+- [ ] TP1 Multiplier input works (0.5-20)
+- [ ] TP1 Close Amount % input works (1-100%)
+- [ ] TP2 Multiplier input works (0.5-20)
+- [ ] TP2 Close Amount % input works (1-100%)
+- [ ] TP3 Multiplier input works (0.5-20)
+- [ ] TP3 Close Amount % input works (1-100%)
+
+### Position Management
+- [ ] Initial position opens with configured size
+- [ ] Average entry price tracked correctly
+- [ ] Position count increments with scale-ins
+- [ ] Position count displayed in dashboard
+- [ ] Long positions tracked separately from short
+- [ ] Position direction shown correctly in dashboard
+
+### Stop Loss Execution
+- [ ] ATR-based stop loss calculates correctly
+- [ ] Fixed percentage stop loss calculates correctly
+- [ ] Previous swing stop loss identifies swing points
+- [ ] Stop loss level shown in dashboard
+- [ ] Stop loss level updates on chart
+- [ ] Position closes when stop loss hit
+- [ ] Stop loss distance appropriate for volatility
+
+### Take Profit Execution
+- [ ] TP1 level calculates correctly
+- [ ] TP2 level calculates correctly
+- [ ] TP3 level calculates correctly
+- [ ] TP levels adjust based on method selected
+- [ ] 50% position closes at TP1
+- [ ] 30% of remaining closes at TP2
+- [ ] All remaining closes at TP3
+- [ ] Next TP target shown in dashboard
+- [ ] TP levels update correctly after hits
+
+### Pyramiding/Scale-In Logic
+- [ ] Scale-in disabled when pyramiding off
+- [ ] Scale-in triggers on confirmation increase (4-5/5)
+- [ ] Scale-in triggers on ADX increase (+5 points)
+- [ ] Scale-in triggers on favorable price move (0.5 ATR)
+- [ ] Scale-in adds configured percentage
+- [ ] Maximum scale-ins respected
+- [ ] Average entry price updates after scale-in
+- [ ] Stop loss updates after scale-in
+- [ ] Position count increments correctly
+
+### Trailing Stop Logic
+- [ ] Trailing stop activates after TP1 hit
+- [ ] Trailing stop activates after +2 ATR move
+- [ ] Trailing stop distance uses configured multiplier
+- [ ] Trailing stop only moves in profitable direction
+- [ ] Trailing stop never moves backward
+- [ ] Dashboard shows "(Trail)" indicator
+- [ ] Breakeven stop set after TP1
+- [ ] Position closes when trailing stop hit
+
+### Enhanced Dashboard (v2.0)
+- [ ] Position row shows LONG/SHORT/None
+- [ ] Position color: green (long), red (short), gray (none)
+- [ ] Entry & P&L row shows entry price
+- [ ] Entry & P&L shows current percentage
+- [ ] P&L color: green (profit), red (loss)
+- [ ] Stop Loss row shows current level
+- [ ] Stop Loss shows "(Trail)" when active
+- [ ] Next TP row shows next target level
+- [ ] Scale Count shows current vs maximum
+- [ ] All new rows update in real-time
+
 ## ✓ Alert System
 
-### Alert Configuration
+### Alert Configuration (v2.0)
 - [ ] Long Entry Alert creates successfully
 - [ ] Short Entry Alert creates successfully
 - [ ] Exit Long Alert creates successfully
 - [ ] Exit Short Alert creates successfully
+- [ ] Scale-In alerts available (NEW)
+- [ ] Take Profit alerts available (NEW)
+- [ ] Stop Loss alerts available (NEW)
 - [ ] Webhook URL accepts server address
 
-### Alert Messages
-- [ ] Messages contain action (buy/sell/exit)
+### Entry Alert Messages (Enhanced v2.0)
+- [ ] Messages contain action (BUY/SELL)
+- [ ] Messages contain signal_type (ENTRY)
+- [ ] Messages contain direction (LONG/SHORT)
 - [ ] Messages contain symbol name
 - [ ] Messages contain current price
 - [ ] Messages contain market regime
 - [ ] Messages contain confirmation count
+- [ ] Messages contain position_size percentage (NEW)
+- [ ] Messages contain stop_loss level (NEW)
+- [ ] Messages contain take_profit_1 level (NEW)
+- [ ] Messages contain take_profit_2 level (NEW)
+- [ ] Messages contain take_profit_3 level (NEW)
+- [ ] Messages contain risk_reward_ratio (NEW)
+- [ ] Messages contain ATR value (NEW)
+- [ ] Messages contain timestamp
+- [ ] JSON format is valid
+
+### Scale-In Alert Messages (NEW in v2.0)
+- [ ] Alert triggers on scale-in entry
+- [ ] Contains action "ADD"
+- [ ] Contains signal_type "SCALE_IN"
+- [ ] Contains position_number (2, 3, etc.)
+- [ ] Contains scale_in_size percentage
+- [ ] Contains total_position percentage
+- [ ] Contains updated_avg_price
+- [ ] Contains updated_stop_loss
+- [ ] Contains reason for scale-in
+- [ ] JSON format is valid
+
+### Take Profit Alert Messages (NEW in v2.0)
+- [ ] Alert triggers at TP1
+- [ ] Alert triggers at TP2
+- [ ] Alert triggers at TP3
+- [ ] Contains action "CLOSE_PARTIAL"
+- [ ] Contains signal_type "TAKE_PROFIT"
+- [ ] Contains tp_level (TP1/TP2/TP3)
+- [ ] Contains close_amount percentage
+- [ ] Contains profit percentage
+- [ ] Contains remaining_position percentage
+- [ ] Contains move_stop_to_breakeven flag
+- [ ] Contains instruction text
+- [ ] JSON format is valid
+
+### Stop Loss Alert Messages (NEW in v2.0)
+- [ ] Alert triggers on stop loss hit
+- [ ] Alert triggers on trailing stop hit
+- [ ] Contains action "CLOSE"
+- [ ] Contains signal_type "STOP_LOSS" or "TRAILING_STOP"
+- [ ] Contains loss or profit percentage
+- [ ] Contains stop_type (FIXED_ATR/TRAILING/BREAKEVEN)
+- [ ] Contains instruction text
+- [ ] JSON format is valid
+
+### Exit Signal Alert Messages (Enhanced v2.0)
+- [ ] Alert triggers on exit signal
+- [ ] Contains action "CLOSE"
+- [ ] Contains signal_type "EXIT_SIGNAL"
+- [ ] Contains direction
+- [ ] Contains profit or loss percentage (NEW)
+- [ ] Contains reason for exit (NEW)
+- [ ] Contains instruction text (NEW)
 - [ ] JSON format is valid
 
 ### Webhook Integration
@@ -235,6 +395,8 @@ Use this checklist to validate the Adaptive Multi-Timeframe Momentum Strategy be
 - [ ] Alerts display on dashboard
 - [ ] Timestamp is correct
 - [ ] Multiple alerts handled properly
+- [ ] All new alert types received correctly (NEW)
+- [ ] JSON parsing works for enhanced formats (NEW)
 
 ## ✓ Backtesting Validation
 
@@ -334,65 +496,133 @@ Use this checklist to validate the Adaptive Multi-Timeframe Momentum Strategy be
 - [ ] Error handling is robust
 - [ ] Logging is adequate
 
-## ✓ Documentation Review
+## ✓ Documentation Review (v2.0)
 
 ### Strategy Documentation
 - [ ] STRATEGY_GUIDE.md is complete
-- [ ] All features documented
+- [ ] All v2.0 features documented (NEW)
+- [ ] Risk management section added (NEW)
 - [ ] Examples are clear
 - [ ] Configuration explained
 - [ ] Risk warnings included
 
+### Risk Management Guide (NEW in v2.0)
+- [ ] RISK_MANAGEMENT_GUIDE.md exists
+- [ ] All risk features documented
+- [ ] Trade direction control explained
+- [ ] Position sizing covered
+- [ ] Stop loss system detailed
+- [ ] Take profit system detailed
+- [ ] Trailing stops explained
+- [ ] Alert system documented
+- [ ] Dashboard metrics explained
+- [ ] Best practices included
+- [ ] Configuration examples provided
+
 ### Quick Start Guide
 - [ ] QUICK_START.md is beginner-friendly
 - [ ] Setup steps are clear
+- [ ] Risk management setup included (NEW)
 - [ ] Includes troubleshooting
 - [ ] Has visual descriptions
 - [ ] Includes expected outcomes
+- [ ] Dashboard explanation updated for v2.0 (NEW)
+- [ ] Risk management checklist included (NEW)
 
-### Configuration Files
+### Configuration Files (v2.0)
 - [ ] strategy_configs.json has valid JSON
-- [ ] All presets are tested
+- [ ] All 6 presets are tested
 - [ ] Parameters are explained
+- [ ] Risk management settings added to each profile (NEW)
+- [ ] Stop loss settings in each profile (NEW)
+- [ ] Take profit settings in each profile (NEW)
+- [ ] Position sizing settings in each profile (NEW)
+- [ ] Pyramiding settings in each profile (NEW)
 - [ ] Risk templates included
 - [ ] Market-specific tips provided
 
 ### README
 - [ ] README.md gives good overview
+- [ ] v2.0 features highlighted (NEW)
+- [ ] Risk management section updated (NEW)
 - [ ] Links to other docs work
+- [ ] Links to RISK_MANAGEMENT_GUIDE.md work (NEW)
 - [ ] Installation steps clear
 - [ ] Features listed accurately
 - [ ] Disclaimer is present
 
-## Post-Validation Checklist
+## ✓ v2.0 Specific Validation
+
+### Backward Compatibility
+- [ ] v1.0 users can upgrade without issues
+- [ ] Default settings match v1.0 behavior
+- [ ] Risk features disabled by default (except basic stop loss)
+- [ ] Old alerts still work
+- [ ] Old dashboard still readable
+- [ ] No breaking changes to existing functionality
+
+### New Features Integration
+- [ ] Risk features work with multi-timeframe
+- [ ] Risk features work with market regime detection
+- [ ] Risk features work with confirmation system
+- [ ] Pyramiding doesn't break other features
+- [ ] Trailing stops work with take profits
+- [ ] All features work together harmoniously
+
+### Performance Impact
+- [ ] Strategy loads in reasonable time (<5 sec)
+- [ ] No performance degradation from v1.0
+- [ ] Dashboard updates smoothly
+- [ ] Alerts generate without delay
+- [ ] No memory issues with position tracking
+- [ ] No lag with multiple active positions
+
+## Post-Validation Checklist (v2.0)
 
 ### Before Paper Trading
 - [ ] All validation items checked
 - [ ] Strategy backtested successfully
 - [ ] Configuration chosen and documented
-- [ ] Risk management plan created
+- [ ] Risk management plan created (NEW)
+- [ ] Risk management settings configured (NEW)
+- [ ] Position sizing strategy defined (NEW)
+- [ ] Stop loss method selected (NEW)
+- [ ] Take profit targets set (NEW)
+- [ ] Pyramiding settings chosen (NEW)
 - [ ] Trading journal prepared
 - [ ] Alert system tested end-to-end
+- [ ] All new alert types tested (NEW)
 
 ### Before Live Trading
 - [ ] Paper traded for 2+ weeks
 - [ ] Win rate is acceptable (>45%)
-- [ ] Risk management proven
+- [ ] Risk management proven effective (NEW)
+- [ ] Stop losses executed as expected (NEW)
+- [ ] Take profits hit at correct levels (NEW)
+- [ ] Pyramiding worked in trending markets (NEW)
+- [ ] Trailing stops protected profits (NEW)
+- [ ] Average RR ratio meets targets (NEW)
 - [ ] Emotional discipline tested
 - [ ] Broker integration ready (if applicable)
 - [ ] Emergency stop procedures defined
-- [ ] Position sizing calculated
+- [ ] Position sizing calculated per risk %
 - [ ] Maximum loss limits set
+- [ ] Maximum position exposure defined (NEW)
 
-## Acceptance Criteria
+## Acceptance Criteria (v2.0)
 
 Strategy is ready for use when:
-- ✓ All validation items pass
+- ✓ All validation items pass (including v2.0 items)
 - ✓ Backtests show positive results
 - ✓ Paper trading is successful
-- ✓ User understands all features
-- ✓ Risk management is in place
-- ✓ Documentation is complete
+- ✓ User understands all features (including risk management)
+- ✓ Risk management is configured and tested (NEW)
+- ✓ Stop losses protect capital as expected (NEW)
+- ✓ Take profits lock in gains as expected (NEW)
+- ✓ Pyramiding works without over-leverage (NEW)
+- ✓ All alert types generate correctly (NEW)
+- ✓ Dashboard shows accurate position info (NEW)
+- ✓ Documentation is complete (including RISK_MANAGEMENT_GUIDE.md)
 
 ## Notes Section
 
@@ -419,5 +649,17 @@ Date: _____________
 ```
 
 ## Version History
+
+- **v2.0** (Current Release): Added comprehensive risk management validation
+  - Trade direction control validation
+  - Position sizing and pyramiding validation
+  - Stop loss system validation (3 types)
+  - Take profit system validation (multi-level)
+  - Trailing stop validation
+  - Enhanced alert system validation (5 alert types)
+  - Enhanced dashboard validation (13 rows)
+  - Configuration file validation with risk settings
+  - Backward compatibility checks
+  - 100+ new validation items
 
 - **v1.0** (Initial Release): Complete validation checklist for adaptive multi-timeframe strategy

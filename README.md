@@ -21,10 +21,10 @@ python First_program.py
 ```
 Access the dashboard at: `http://localhost:5000`
 
-### 2. Adaptive Multi-Timeframe Momentum Strategy (`adaptive_momentum_strategy.pine`)
-A sophisticated Pine Script strategy for TradingView that adapts to market conditions.
+### 2. Adaptive Multi-Timeframe Momentum Strategy v2.0 (`adaptive_momentum_strategy.pine`)
+A sophisticated Pine Script strategy for TradingView that adapts to market conditions with professional-grade risk management.
 
-**Key Features:**
+**Core Features:**
 - **Multi-Timeframe Analysis**: Works on 15min, 1H, and 4H charts simultaneously
 - **Market Regime Detection**: Automatically identifies trending vs choppy markets using ADX
 - **Adaptive Logic**: Uses different strategies for different market conditions
@@ -37,8 +37,27 @@ A sophisticated Pine Script strategy for TradingView that adapts to market condi
   - ADX (14) for market regime detection
 - **Signal Filtering**: Multiple confirmation system to reduce noise
 - **Volatility Filter**: Blocks trades during extreme volatility
-- **Real-time Dashboard**: Shows market regime, indicator values, and confirmations
-- **Webhook Alerts**: JSON-formatted alerts ready for webhook integration
+
+**NEW in v2.0 - Professional Risk Management:**
+- **Trade Direction Control**: Long Only, Short Only, or Both
+- **Position Sizing & Pyramiding**: Scale into winning positions with configurable entry sizes
+- **Advanced Stop Loss System**: 
+  - ATR-based stops (adapts to volatility)
+  - Fixed percentage stops
+  - Previous swing stops
+  - Trailing stops with breakeven protection
+- **Multi-Level Take Profits**: 
+  - 3 configurable TP levels
+  - Partial position closing (50%, 30%, 20%)
+  - ATR-based, Risk-Reward, or Fixed % methods
+- **Enhanced Dashboard**: Real-time P&L, position info, stop/target levels
+- **Comprehensive Alerts**: JSON alerts with full trade details for automation
+- **Scale-In Triggers**: Automatic position additions based on:
+  - Confirmation increases
+  - Trend strengthening (ADX)
+  - Favorable price movement
+
+See [RISK_MANAGEMENT_GUIDE.md](RISK_MANAGEMENT_GUIDE.md) for complete risk management documentation.
 
 **Quick Start:**
 1. Open TradingView Pine Editor
@@ -104,11 +123,24 @@ python First_program.py
 
 ## Files
 
+### Core Strategy Files
+- `adaptive_momentum_strategy.pine` - TradingView Pine Script strategy v2.0
+- `strategy_configs.json` - Pre-configured strategy profiles with risk management settings
+
+### Documentation
+- `README.md` - This file (overview and quick start)
+- `STRATEGY_GUIDE.md` - Complete strategy documentation and technical details
+- `RISK_MANAGEMENT_GUIDE.md` - **NEW** Comprehensive risk management guide
+- `QUICK_START.md` - 5-minute setup guide for beginners
+- `VALIDATION_CHECKLIST.md` - Testing and validation procedures
+- `IMPLEMENTATION_SUMMARY.md` - Technical implementation details
+
+### Integration
 - `First_program.py` - Flask webhook receiver application
-- `adaptive_momentum_strategy.pine` - TradingView Pine Script strategy
-- `STRATEGY_GUIDE.md` - Complete strategy documentation
 - `requirements.txt` - Python dependencies
 - `templates/index.html` - Dashboard HTML template
+
+### Deployment
 - `Dockerfile` - Docker configuration
 - `compose.yaml` - Docker Compose configuration
 
@@ -132,14 +164,35 @@ docker-compose up -d
 | Signal Frequency | Lower | Higher |
 | Best Timeframe | 1H, 4H, Daily | 15min, 1H |
 
-## Risk Management
+## Risk Management (v2.0)
 
-Always implement proper risk management:
-- Position sizing (1-2% per trade)
-- Stop losses based on ATR
-- Maximum daily loss limits
-- Diversification across symbols
-- Regular performance monitoring
+The strategy now includes built-in professional risk management:
+
+### Configurable Features
+- **Position Sizing**: Initial position and scale-in percentages
+- **Stop Loss**: ATR-based, Fixed %, or Previous Swing
+- **Take Profit**: Multi-level targets (TP1, TP2, TP3)
+- **Trailing Stops**: Automatic profit protection
+- **Pyramiding**: Scale into winning positions
+- **Trade Direction**: Long Only, Short Only, or Both
+
+### Risk Management Presets
+Choose from 6 pre-configured profiles in `strategy_configs.json`:
+1. **Conservative**: 33% position, 2.5 ATR stops, 2:1 RR targets
+2. **Moderate**: 50% position, 2.0 ATR stops, pyramiding enabled
+3. **Aggressive**: 60% position, 1.5 ATR stops, 3x scale-ins
+4. **Crypto Volatile**: 40% position, 3.0 ATR stops for high volatility
+5. **Forex Stable**: 50% position, optimized for forex pairs
+6. **Stocks Daily**: Long-only, optimized for stock markets
+
+### Best Practices
+- Never risk more than 1-2% of account per trade
+- Use ATR-based stops in volatile markets
+- Always take partial profits at TP1 (50%)
+- Enable trailing stops to protect gains
+- Test thoroughly on demo before live trading
+
+See [RISK_MANAGEMENT_GUIDE.md](RISK_MANAGEMENT_GUIDE.md) for detailed instructions.
 
 ## Contributing
 

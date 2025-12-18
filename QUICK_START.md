@@ -23,7 +23,7 @@
      - Dashboard (top right corner)
      - Colored backgrounds showing market regime
 
-### Step 2: Configure Settings (1 minute)
+### Step 2: Configure Settings (2 minutes)
 
 1. **Click the strategy name** on the chart (it will say "Adaptive Multi-Timeframe...")
 2. **Click the gear icon** (Settings)
@@ -31,14 +31,42 @@
    - **Conservative**: For swing trading (fewer but higher quality signals)
    - **Moderate**: For balanced day/swing trading (recommended for beginners)
    - **Aggressive**: For scalping (more signals, higher risk)
+   - **Crypto Volatile**: Optimized for cryptocurrency markets
+   - **Forex Stable**: Optimized for forex pairs
+   - **Stocks Daily**: Long-only for stock markets
 
 **For your first time, use MODERATE settings:**
+
+**Signal Settings:**
 ```
 Minimum Confirmations: 2
 Use Multi-Timeframe: ✓ (enabled)
 Require Trend Alignment: □ (disabled)
 ADX Trend Threshold: 25
 ```
+
+**Risk Management (NEW in v2.0):**
+```
+Trade Direction: "Both"
+Enable Pyramiding: ✓ (enabled)
+Initial Position Size: 50%
+Scale-In Size: 25%
+Max Scale-Ins: 2
+Stop Loss Type: "ATR Based"
+Stop Loss ATR Multiplier: 2.0
+Enable Trailing Stop: ✓ (enabled)
+Trailing Stop ATR Multiplier: 1.5
+Enable Take Profit: ✓ (enabled)
+TP Method: "ATR Based"
+TP1 Multiplier: 1.5
+TP1 Close Amount: 50%
+TP2 Multiplier: 2.5
+TP2 Close Amount: 30%
+TP3 Multiplier: 4.0
+TP3 Close Amount: 100%
+```
+
+**Note**: All risk management features are enabled by default for v2.0. You can disable pyramiding or take profits if you prefer simpler trading.
 
 ### Step 3: Setup Webhook Alerts (2 minutes)
 
@@ -78,6 +106,8 @@ ADX Trend Threshold: 25
   - Red ▼ = Sell signal
 
 ### On the Dashboard (Top Right):
+
+**Market Indicators:**
 - **Market Regime**: Shows current market state
 - **ADX**: Trend strength (higher = stronger trend)
 - **RSI**: Momentum indicator
@@ -85,6 +115,23 @@ ADX Trend Threshold: 25
 - **EMA Trend**: Current trend direction
 - **MTF Status**: Multi-timeframe alignment
 - **Long Confirms**: How many conditions are met
+
+**Position & Risk Info (NEW in v2.0):**
+- **Position**: Current direction (LONG/SHORT/None)
+- **Entry & P&L**: Entry price and profit/loss percentage
+- **Stop Loss**: Active stop level (shows "(Trail)" if trailing)
+- **Next TP**: Next take profit target to be hit
+- **Scale Count**: Number of positions entered vs maximum allowed
+
+**Example Active Position:**
+```
+Position: LONG
+Entry & P&L: 45000 (+3.5%)
+Stop Loss: 43600 (Trail)
+Next TP: 46400
+Scale Count: 2/3
+```
+This means: You're long from $45,000, up 3.5%, trailing stop at $43,600, next target $46,400, and you've entered 2 of 3 allowed positions.
 
 ## Understanding Your First Signals
 
@@ -157,6 +204,100 @@ ADX Trend Threshold: 25
 - Choppy markets: 40-50% win rate is acceptable
 - Overall: Aim for profit factor >1.5
 
+### Q: How do stop losses and take profits work?
+**A:** The strategy automatically:
+- Sets stop loss when you enter (e.g., 2 ATR below entry for long)
+- Closes 50% at TP1 (first target)
+- Closes 15% at TP2 (second target)
+- Closes remaining 35% at TP3 (final target)
+- Activates trailing stop after TP1 to protect profits
+
+### Q: What is pyramiding/scale-in?
+**A:** Pyramiding adds to winning positions:
+- Start with 50% position
+- Add 25% when trend strengthens (up to 2 more times)
+- Results in better average entry price
+- Only happens in strong, confirmed trends
+
+### Q: Should I enable pyramiding as a beginner?
+**A:** 
+- **Beginners**: Keep it disabled or max 1 scale-in
+- **Intermediate**: Enable with 2 scale-ins (default)
+- **Advanced**: Can use 3-5 scale-ins in very strong trends
+
+## Understanding Risk Management (v2.0)
+
+### Position Sizing Example
+**Account**: $10,000
+**Risk per trade**: 2% = $200
+
+**Trade Setup**:
+- Entry: $100
+- Stop Loss: $96 (2 ATR = $4 away)
+- Position Size: $200 ÷ $4 = 50 shares
+- Position Value: 50 × $100 = $5,000 (50% of account)
+
+**With Pyramiding**:
+- Initial Entry: 50 shares at $100 = $5,000
+- Scale-In 1: 25 shares at $102 = $2,500
+- Scale-In 2: 25 shares at $105 = $2,500
+- Total: 100 shares, Average: $101.67, Exposure: $10,167
+
+### Take Profit Example
+**Initial**: 100 shares at $100
+**ATR**: $2
+
+1. **TP1 at $103** (1.5 ATR):
+   - Close 50 shares
+   - Profit: 50 × $3 = $150
+   - Remaining: 50 shares
+
+2. **TP2 at $105** (2.5 ATR):
+   - Close 15 shares (30% of remaining)
+   - Profit: 15 × $5 = $75
+   - Remaining: 35 shares
+
+3. **TP3 at $108** (4.0 ATR):
+   - Close 35 shares (all remaining)
+   - Profit: 35 × $8 = $280
+   - **Total Profit**: $505 on $10,000 = 5.05%
+
+### Stop Loss Protection
+The strategy protects you automatically:
+- **Initial Stop**: Prevents large losses (e.g., -2%)
+- **Trailing Stop**: Locks in profits after TP1
+- **Breakeven Stop**: Moves to entry after TP1 hits
+- **Never moves backward**: Only in profitable direction
+
+### Quick Risk Settings Guide
+
+**Conservative (Lower Risk)**:
+```
+Initial Position: 33%
+Max Scale-Ins: 1
+Stop Loss ATR: 2.5
+TP1 Multiplier: 2.0
+Enable Trailing: Yes
+```
+
+**Moderate (Balanced)**:
+```
+Initial Position: 50%
+Max Scale-Ins: 2
+Stop Loss ATR: 2.0
+TP1 Multiplier: 1.5
+Enable Trailing: Yes
+```
+
+**Aggressive (Higher Risk)**:
+```
+Initial Position: 60%
+Max Scale-Ins: 3
+Stop Loss ATR: 1.5
+TP1 Multiplier: 1.0
+Enable Trailing: Yes
+```
+
 ## Next Steps
 
 ### Week 1: Learn the System
@@ -179,17 +320,44 @@ ADX Trend Threshold: 25
 - Follow your risk management rules
 - Review and adjust regularly
 
-## Risk Management Checklist
+## Risk Management Checklist (v2.0)
 
-Before each trade, confirm:
+### Before First Trade
+- [ ] Risk management settings configured
+- [ ] Position size appropriate for account (1-2% risk)
+- [ ] Stop loss type selected (ATR Based recommended)
+- [ ] Take profit levels enabled
+- [ ] Trailing stops enabled
+- [ ] Pyramiding configured (or disabled if beginner)
+- [ ] Trade direction set (Both/Long Only/Short Only)
+- [ ] Dashboard understood (can read P&L, stops, targets)
+
+### Before Each Trade
 - [ ] Position size calculated (1-2% of account risk)
-- [ ] Stop loss level set (based on ATR or support/resistance)
-- [ ] Take profit target identified (2:1 or 3:1 reward:risk)
-- [ ] Market regime checked (dashboard)
-- [ ] Confirmations count is sufficient (2+ for trending, 3+ for choppy)
+- [ ] Stop loss level verified (strategy sets automatically)
+- [ ] Take profit targets confirmed (TP1, TP2, TP3)
+- [ ] Risk-reward ratio acceptable (minimum 1.5:1)
+- [ ] Market regime checked (trending vs choppy)
+- [ ] Confirmations count sufficient (2+ for trending, 3+ for choppy)
 - [ ] Multi-timeframe alignment (if enabled)
 - [ ] No major news events expected
-- [ ] Account has no other correlated positions
+- [ ] Total account exposure acceptable (including existing positions)
+- [ ] Dashboard shows "ready" state (no conflicting positions)
+
+### During Trade (Strategy Manages Automatically)
+- [ ] Monitor dashboard for P&L updates
+- [ ] Watch for TP1 hit (50% closes automatically)
+- [ ] Check trailing stop activation (after TP1)
+- [ ] Look for scale-in opportunities (if enabled)
+- [ ] Verify stop moved to breakeven after TP1
+
+### After Trade
+- [ ] Record trade in journal
+- [ ] Note win/loss and percentage
+- [ ] Check which TP levels were hit
+- [ ] Review if pyramiding was used
+- [ ] Calculate actual RR ratio achieved
+- [ ] Note market regime during trade
 
 ## Troubleshooting
 
@@ -212,9 +380,12 @@ Before each trade, confirm:
 
 ## Support Resources
 
-- **Full Documentation**: See `STRATEGY_GUIDE.md`
-- **Configuration Presets**: See `strategy_configs.json`
-- **Flask Webhook**: Already in `First_program.py`
+- **Quick Start**: This file - 5-minute setup
+- **Risk Management Guide**: `RISK_MANAGEMENT_GUIDE.md` - Comprehensive risk management
+- **Strategy Guide**: `STRATEGY_GUIDE.md` - Complete technical documentation
+- **Configuration Presets**: `strategy_configs.json` - 6 pre-configured profiles
+- **Validation Checklist**: `VALIDATION_CHECKLIST.md` - Testing procedures
+- **Flask Webhook**: `First_program.py` - Alert receiver
 
 ## Pro Tips
 

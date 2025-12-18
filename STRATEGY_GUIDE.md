@@ -151,6 +151,42 @@ Use Multi-Timeframe: true
 Require Trend Alignment: true
 ```
 
+### Risk Management Settings (NEW in v2.0)
+
+#### Trade Direction
+```
+Trade Direction: "Both"  // Options: "Both", "Long Only", "Short Only"
+```
+
+#### Position Sizing & Pyramiding
+```
+Enable Pyramiding: false  // Enable position scaling
+Initial Position %: 50    // First entry size
+Scale-In Size %: 25       // Additional entry size
+Max Scale-In Count: 2     // Maximum additional entries (total 3 positions)
+```
+
+#### Stop Loss System
+```
+Stop Loss Type: "ATR Based"           // Options: "ATR Based", "Fixed Percentage", "Previous Swing"
+Stop Loss ATR Multiplier: 2.0         // For ATR-based stops
+Stop Loss Percentage: 2.0             // For fixed % stops
+Enable Trailing Stop: true            // Auto-move stops to protect profits
+Trailing Stop ATR Multiplier: 1.5     // Distance for trailing stop
+```
+
+#### Take Profit System
+```
+Enable Take Profit: true              // Enable multi-level targets
+TP Method: "ATR Based"                // Options: "ATR Based", "Risk-Reward Ratio", "Fixed Percentage"
+TP1 Multiplier: 1.5                   // First target (1.5x ATR or 1.5:1 RR)
+TP1 Close Amount %: 50                // Close 50% at TP1
+TP2 Multiplier: 2.5                   // Second target (2.5x ATR or 2.5:1 RR)
+TP2 Close Amount %: 30                // Close 30% of remaining (15% total) at TP2
+TP3 Multiplier: 4.0                   // Final target (4.0x ATR or 4.0:1 RR)
+TP3 Close Amount %: 100               // Close remaining 35% at TP3
+```
+
 ## How to Use in TradingView
 
 ### Installation
@@ -341,6 +377,224 @@ While the strategy includes signal filtering, always implement proper risk manag
 - Use higher timeframes for major trend
 - Add additional filters
 
+## Risk Management Features (v2.0)
+
+### Trade Direction Control
+Control which trades the strategy generates:
+- **Both**: Generate long and short signals (default)
+- **Long Only**: Only buy signals (good for stock markets, bull markets)
+- **Short Only**: Only sell signals (good for bear markets, hedging)
+
+**When to use**:
+- Use "Long Only" for stock retirement accounts or strong bull markets
+- Use "Short Only" to profit from bear markets
+- Use "Both" for forex, crypto, and futures markets
+
+### Position Sizing & Pyramiding
+Scale into winning positions as trends strengthen:
+
+**How it works**:
+1. Enter with initial position (e.g., 50% of account)
+2. Add to position when conditions improve (scale-in)
+3. Track average entry price
+4. Manage risk across all positions
+
+**Scale-In Triggers**:
+- Confirmations increase to 4 or 5 out of 5
+- ADX increases by 5+ points (trend strengthens)
+- Price moves 0.5 ATR in profitable direction
+
+**Example**:
+- Entry 1: Buy 50% at $100
+- Scale-In 1: Add 25% at $102 (trend strengthens)
+- Scale-In 2: Add 25% at $105 (confirmations increase)
+- Total: 100% position with $101.67 average entry
+
+**Best Practices**:
+- Only pyramid in strong, clear trends
+- Scale smaller than initial position
+- Never exceed 100% account exposure
+- Use tighter stops when pyramiding
+
+### Stop Loss System
+Three stop loss calculation methods:
+
+**1. ATR Based (Recommended)**:
+- Adapts to market volatility
+- Long: Entry - (ATR × Multiplier)
+- Short: Entry + (ATR × Multiplier)
+- Default: 2.0× ATR
+
+**2. Fixed Percentage**:
+- Simple, predictable risk
+- Long: Entry × (1 - %)
+- Short: Entry × (1 + %)
+- Default: 2%
+
+**3. Previous Swing**:
+- Based on market structure
+- Uses recent swing lows/highs
+- Respects natural support/resistance
+
+**Stop Loss Guidelines**:
+| Risk Level | ATR Mult | Fixed % |
+|-----------|----------|---------|
+| Conservative | 2.5-3.0 | 2.5-3.0% |
+| Moderate | 2.0-2.5 | 2.0-2.5% |
+| Aggressive | 1.5-2.0 | 1.5-2.0% |
+
+### Take Profit System
+Multi-level profit targets with partial position closing:
+
+**Three TP Methods**:
+1. **ATR Based**: Targets based on volatility
+2. **Risk-Reward Ratio**: Based on stop distance
+3. **Fixed Percentage**: Fixed % gains
+
+**TP Levels**:
+- **TP1** (1.5x): Close 50% of position
+- **TP2** (2.5x): Close 30% of remaining (15% total)
+- **TP3** (4.0x): Close remaining 35%
+
+**Example with ATR Method**:
+```
+Entry: $100, ATR: $2
+TP1: $100 + ($2 × 1.5) = $103 → Close 50%
+TP2: $100 + ($2 × 2.5) = $105 → Close 15%
+TP3: $100 + ($2 × 4.0) = $108 → Close 35%
+```
+
+**Benefits**:
+- Lock in profits early (TP1)
+- Let winners run (remaining position)
+- Reduce risk as trade develops
+- Capture big moves when they happen
+
+### Trailing Stops
+Automatically move stops to protect profits:
+
+**Activation**:
+- After TP1 is hit, OR
+- After price moves +2 ATR in your favor
+
+**How it Works**:
+- Trails price by 1.5 ATR (configurable)
+- Only moves in profitable direction
+- Never moves backward
+
+**Breakeven Protection**:
+- After TP1, stop moves to entry price
+- Ensures no loss on remaining position
+- Psychological safety net
+
+**Example**:
+```
+Entry: $100, Initial Stop: $96
+Price hits TP1 at $103 → Trailing activated
+Price moves to $110 → Stop trails to $107
+Price drops to $107.50 → Closed by trailing stop
+Result: $7.50 profit vs risking full $10 gain
+```
+
+### Enhanced Alert System
+Comprehensive JSON alerts for every action:
+
+**Entry Alert** - Full trade setup:
+```json
+{
+  "action": "BUY",
+  "signal_type": "ENTRY",
+  "direction": "LONG",
+  "symbol": "BTCUSD",
+  "price": 45000,
+  "position_size": "50%",
+  "stop_loss": 43600,
+  "take_profit_1": 46400,
+  "take_profit_2": 47800,
+  "take_profit_3": 50200,
+  "risk_reward_ratio": 2.33,
+  "confirmations": 4
+}
+```
+
+**Scale-In Alert** - Position additions:
+```json
+{
+  "action": "ADD",
+  "signal_type": "SCALE_IN",
+  "position_number": 2,
+  "scale_in_size": "25%",
+  "total_position": "75%",
+  "updated_avg_price": 45333.33,
+  "reason": "Confirmations increased to 5/5"
+}
+```
+
+**Take Profit Alert** - Partial closes:
+```json
+{
+  "action": "CLOSE_PARTIAL",
+  "signal_type": "TAKE_PROFIT",
+  "tp_level": "TP1",
+  "close_amount": "50%",
+  "profit": "+3.11%",
+  "remaining_position": "50%",
+  "move_stop_to_breakeven": true
+}
+```
+
+### Enhanced Dashboard
+Real-time position and risk metrics:
+
+**New Dashboard Items**:
+- **Position**: Current direction (LONG/SHORT/None)
+- **Entry & P&L**: Entry price and current profit/loss
+- **Stop Loss**: Active stop level (shows if trailing)
+- **Next TP**: Next take profit target
+- **Scale Count**: Position count (e.g., 2/3)
+
+**Example Dashboard**:
+```
+Position: LONG
+Entry & P&L: 45000 (+3.5%)
+Stop Loss: 43600 (Trail)
+Next TP: 46400
+Scale Count: 2/3
+```
+
+### Risk Management Best Practices
+
+1. **Position Sizing**:
+   - Never risk more than 1-2% per trade
+   - Calculate: Risk $ = Account × 2% / Stop Distance
+   - Account for pyramiding in total exposure
+
+2. **Stop Loss Management**:
+   - Always set stops before entry
+   - Use ATR-based in volatile markets
+   - Give stops room (2+ ATR)
+   - Never move stops against you
+
+3. **Take Profit Strategy**:
+   - Always take partial profits at TP1
+   - Let remaining position run
+   - Adjust targets for market conditions
+   - Be aggressive in choppy markets
+
+4. **Pyramiding Guidelines**:
+   - Only in strong, clear trends
+   - Scale smaller than initial
+   - Update stops after each entry
+   - Maximum 2-3 scale-ins
+
+5. **Risk-Reward Requirements**:
+   - Minimum 1.5:1 RR ratio
+   - Target 2:1 or better
+   - Higher RR = lower win rate needed
+   - Calculate before every trade
+
+For complete risk management details, see [RISK_MANAGEMENT_GUIDE.md](RISK_MANAGEMENT_GUIDE.md).
+
 ## Continuous Improvement
 
 The strategy can be enhanced by:
@@ -370,6 +624,17 @@ This strategy is provided for educational purposes. Always:
 - Use proper risk management at all times
 
 ## Version History
+
+### Version 2.0 (Current)
+- **NEW**: Trade direction control (Both/Long Only/Short Only)
+- **NEW**: Position sizing and pyramiding with scale-in triggers
+- **NEW**: Multi-method stop loss system (ATR/Fixed %/Previous Swing)
+- **NEW**: Multi-level take profit system with partial closes
+- **NEW**: Trailing stops with breakeven protection
+- **NEW**: Enhanced alert system with comprehensive JSON data
+- **NEW**: Enhanced dashboard with position and risk metrics
+- **NEW**: 6 pre-configured risk management profiles
+- **NEW**: Comprehensive risk management documentation
 
 ### Version 1.0
 - Initial release

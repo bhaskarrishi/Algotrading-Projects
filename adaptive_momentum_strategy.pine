@@ -43,6 +43,32 @@ minConfirmations = input.int(2, "Minimum Confirmations", minval=1, maxval=5, gro
 useMultiTimeframe = input.bool(true, "Use Multi-Timeframe Confirmation", group="Signal Filtering")
 requireTrendAlignment = input.bool(true, "Require Trend Alignment", group="Signal Filtering")
 
+// Trade Direction
+tradeDirection = input.string("Both", "Trade Direction", options=["Both", "Long Only", "Short Only"], group="Trade Direction")
+
+// Position Sizing & Pyramiding
+enablePyramiding = input.bool(false, "Enable Pyramiding", group="Position Sizing")
+initialPositionPct = input.float(50, "Initial Position Size %", minval=1, maxval=100, step=1, group="Position Sizing")
+scaleInPct = input.float(25, "Scale-In Size %", minval=1, maxval=100, step=1, group="Position Sizing")
+maxScaleIns = input.int(2, "Maximum Scale-In Count", minval=0, maxval=5, group="Position Sizing")
+
+// Stop Loss Settings
+stopLossType = input.string("ATR Based", "Stop Loss Type", options=["ATR Based", "Fixed Percentage", "Previous Swing"], group="Stop Loss")
+stopLossAtrMult = input.float(2.0, "Stop Loss ATR Multiplier", minval=0.5, maxval=10, step=0.1, group="Stop Loss")
+stopLossPct = input.float(2.0, "Stop Loss Percentage", minval=0.1, maxval=20, step=0.1, group="Stop Loss")
+enableTrailingStop = input.bool(true, "Enable Trailing Stop", group="Stop Loss")
+trailingStopAtrMult = input.float(1.5, "Trailing Stop ATR Multiplier", minval=0.5, maxval=10, step=0.1, group="Stop Loss")
+
+// Take Profit Settings
+enableTakeProfit = input.bool(true, "Enable Take Profit", group="Take Profit")
+tpMethod = input.string("ATR Based", "TP Method", options=["ATR Based", "Risk-Reward Ratio", "Fixed Percentage"], group="Take Profit")
+tp1Mult = input.float(1.5, "TP1 Multiplier/Ratio", minval=0.5, maxval=20, step=0.1, group="Take Profit")
+tp1ClosePct = input.float(50, "TP1 Close Amount %", minval=1, maxval=100, step=1, group="Take Profit")
+tp2Mult = input.float(2.5, "TP2 Multiplier/Ratio", minval=0.5, maxval=20, step=0.1, group="Take Profit")
+tp2ClosePct = input.float(30, "TP2 Close Amount % (of remaining)", minval=1, maxval=100, step=1, group="Take Profit")
+tp3Mult = input.float(4.0, "TP3 Multiplier/Ratio", minval=0.5, maxval=20, step=0.1, group="Take Profit")
+tp3ClosePct = input.float(100, "TP3 Close Amount % (of remaining)", minval=1, maxval=100, step=1, group="Take Profit")
+
 // ============================================================================
 // INDICATOR CALCULATIONS - CURRENT TIMEFRAME
 // ============================================================================
@@ -61,6 +87,33 @@ rsi = ta.rsi(close, rsiLength)
 
 // ADX Calculations for Market Regime Detection
 [diPlus, diMinus, adx] = ta.dmi(adxLength, adxLength)
+
+// ATR for risk management
+atr = ta.atr(14)
+
+// ============================================================================
+// POSITION TRACKING VARIABLES
+// ============================================================================
+
+var float longEntryPrice = na
+var float shortEntryPrice = na
+var float avgLongEntry = na
+var float avgShortEntry = na
+var int longPositionCount = 0
+var int shortPositionCount = 0
+var float longStopLoss = na
+var float shortStopLoss = na
+var bool tp1HitLong = false
+var bool tp2HitLong = false
+var bool tp1HitShort = false
+var bool tp2HitShort = false
+var bool trailingStopActiveLong = false
+var bool trailingStopActiveShort = false
+var float lastLongScaleInPrice = na
+var float lastShortScaleInPrice = na
+var int previousLongConfirmations = 0
+var int previousShortConfirmations = 0
+var float previousAdx = 0
 
 // ============================================================================
 // MARKET REGIME DETECTION
@@ -161,6 +214,77 @@ if diMinus > diPlus
     short_confirmations := short_confirmations + 1
 
 // ============================================================================
+// RISK MANAGEMENT CALCULATIONS
+// ============================================================================
+
+// Function to calculate stop loss level
+calcStopLoss(entryPrice, isLong) =>
+    stopLevel = 0.0
+    if stopLossType == "ATR Based"
+        stopLevel := isLong ? entryPrice - (atr * stopLossAtrMult) : entryPrice + (atr * stopLossAtrMult)
+    else if stopLossType == "Fixed Percentage"
+        stopLevel := isLong ? entryPrice * (1 - stopLossPct / 100) : entryPrice * (1 + stopLossPct / 100)
+    else if stopLossType == "Previous Swing"
+        // Use ATR-based as fallback for swing (simplified)
+        lookback = 20
+        swingLow = ta.lowest(low, lookback)
+        swingHigh = ta.highest(high, lookback)
+        stopLevel := isLong ? swingLow : swingHigh
+    stopLevel
+
+// Function to calculate take profit levels
+calcTakeProfitLevels(entryPrice, stopDistance, isLong) =>
+    tp1 = 0.0
+    tp2 = 0.0
+    tp3 = 0.0
+    
+    if tpMethod == "ATR Based"
+        tp1 := isLong ? entryPrice + (atr * tp1Mult) : entryPrice - (atr * tp1Mult)
+        tp2 := isLong ? entryPrice + (atr * tp2Mult) : entryPrice - (atr * tp2Mult)
+        tp3 := isLong ? entryPrice + (atr * tp3Mult) : entryPrice - (atr * tp3Mult)
+    else if tpMethod == "Risk-Reward Ratio"
+        tp1 := isLong ? entryPrice + (stopDistance * tp1Mult) : entryPrice - (stopDistance * tp1Mult)
+        tp2 := isLong ? entryPrice + (stopDistance * tp2Mult) : entryPrice - (stopDistance * tp2Mult)
+        tp3 := isLong ? entryPrice + (stopDistance * tp3Mult) : entryPrice - (stopDistance * tp3Mult)
+    else if tpMethod == "Fixed Percentage"
+        tp1 := isLong ? entryPrice * (1 + tp1Mult / 100) : entryPrice * (1 - tp1Mult / 100)
+        tp2 := isLong ? entryPrice * (1 + tp2Mult / 100) : entryPrice * (1 - tp2Mult / 100)
+        tp3 := isLong ? entryPrice * (1 + tp3Mult / 100) : entryPrice * (1 - tp3Mult / 100)
+    
+    [tp1, tp2, tp3]
+
+// Function to check if scale-in should trigger
+shouldScaleIn(isLong, confirmations, prevConfirmations) =>
+    scaleIn = false
+    reason = ""
+    
+    // Check if position exists and pyramiding is enabled
+    if enablePyramiding
+        posCount = isLong ? longPositionCount : shortPositionCount
+        
+        if posCount > 0 and posCount <= maxScaleIns
+            // Trigger 1: Confirmations increased
+            if confirmations > prevConfirmations and confirmations >= 4
+                scaleIn := true
+                reason := "Confirmations increased to " + str.tostring(confirmations) + "/5"
+            
+            // Trigger 2: Trend strengthened (ADX increase)
+            if not scaleIn and adx > previousAdx + 5
+                scaleIn := true
+                reason := "Trend strengthened (ADX: " + str.tostring(math.round(adx, 1)) + ")"
+            
+            // Trigger 3: Favorable price movement
+            if not scaleIn
+                lastEntry = isLong ? lastLongScaleInPrice : lastShortScaleInPrice
+                if not na(lastEntry)
+                    priceMove = isLong ? (close - lastEntry) : (lastEntry - close)
+                    if priceMove >= (atr * 0.5)
+                        scaleIn := true
+                        reason := "Price moved favorably by 0.5 ATR"
+    
+    [scaleIn, reason]
+
+// ============================================================================
 // FINAL ENTRY SIGNALS WITH FILTERING
 // ============================================================================
 
@@ -182,12 +306,26 @@ else
     short_entry := choppy_short_signal and short_confirmations >= (minConfirmations + 1)
 
 // Additional noise filter: avoid signals during extreme volatility
-atr = ta.atr(14)
 atr_threshold = ta.sma(atr, 20) * 1.5
 extreme_volatility = atr > atr_threshold
 
 long_entry := long_entry and not extreme_volatility
 short_entry := short_entry and not extreme_volatility
+
+// Apply trade direction filter
+if tradeDirection == "Long Only"
+    short_entry := false
+else if tradeDirection == "Short Only"
+    long_entry := false
+
+// Check for scale-in opportunities
+[shouldScaleInLong, scaleInReasonLong] = shouldScaleIn(true, long_confirmations, previousLongConfirmations)
+[shouldScaleInShort, scaleInReasonShort] = shouldScaleIn(false, short_confirmations, previousShortConfirmations)
+
+// Store current confirmations for next bar
+previousLongConfirmations := long_confirmations
+previousShortConfirmations := short_confirmations
+previousAdx := adx
 
 // ============================================================================
 // EXIT LOGIC
@@ -213,20 +351,137 @@ exit_long = isTrending ? exit_long_trending : exit_long_choppy
 exit_short = isTrending ? exit_short_trending : exit_short_choppy
 
 // ============================================================================
-// STRATEGY EXECUTION
+// STRATEGY EXECUTION WITH RISK MANAGEMENT
 // ============================================================================
 
-if long_entry
-    strategy.entry("Long", strategy.long, comment="Long Entry")
-    
-if short_entry
-    strategy.entry("Short", strategy.short, comment="Short Entry")
+// Calculate position sizes
+initialQty = initialPositionPct
+scaleInQty = scaleInPct
 
-if exit_long
-    strategy.close("Long", comment="Exit Long")
+// Long Entry Logic
+if long_entry and strategy.position_size == 0
+    // Initial long entry
+    longEntryPrice := close
+    avgLongEntry := close
+    longPositionCount := 1
+    lastLongScaleInPrice := close
+    tp1HitLong := false
+    tp2HitLong := false
+    trailingStopActiveLong := false
     
-if exit_short
-    strategy.close("Short", comment="Exit Short")
+    // Calculate stop loss
+    longStopLoss := calcStopLoss(close, true)
+    
+    // Calculate take profit levels
+    stopDistance = close - longStopLoss
+    [tp1_long, tp2_long, tp3_long] = calcTakeProfitLevels(close, stopDistance, true)
+    
+    // Entry with position sizing
+    strategy.entry("Long", strategy.long, qty=initialQty, comment="Long Entry")
+    
+    // Set exits if take profit enabled
+    if enableTakeProfit
+        strategy.exit("Long TP1", "Long", limit=tp1_long, stop=longStopLoss, qty_percent=tp1ClosePct, comment="TP1 Long")
+    else
+        strategy.exit("Long SL", "Long", stop=longStopLoss, comment="SL Long")
+
+// Long Scale-In Logic
+if shouldScaleInLong and strategy.position_size > 0 and longPositionCount <= maxScaleIns
+    longPositionCount := longPositionCount + 1
+    lastLongScaleInPrice := close
+    
+    // Update average entry price
+    currentSize = strategy.position_size
+    avgLongEntry := ((avgLongEntry * currentSize) + (close * scaleInQty)) / (currentSize + scaleInQty)
+    
+    // Add to position
+    strategy.entry("Long", strategy.long, qty=scaleInQty, comment="Scale-In Long " + str.tostring(longPositionCount))
+
+// Short Entry Logic
+if short_entry and strategy.position_size == 0
+    // Initial short entry
+    shortEntryPrice := close
+    avgShortEntry := close
+    shortPositionCount := 1
+    lastShortScaleInPrice := close
+    tp1HitShort := false
+    tp2HitShort := false
+    trailingStopActiveShort := false
+    
+    // Calculate stop loss
+    shortStopLoss := calcStopLoss(close, false)
+    
+    // Calculate take profit levels
+    stopDistance = shortStopLoss - close
+    [tp1_short, tp2_short, tp3_short] = calcTakeProfitLevels(close, stopDistance, false)
+    
+    // Entry with position sizing
+    strategy.entry("Short", strategy.short, qty=initialQty, comment="Short Entry")
+    
+    // Set exits if take profit enabled
+    if enableTakeProfit
+        strategy.exit("Short TP1", "Short", limit=tp1_short, stop=shortStopLoss, qty_percent=tp1ClosePct, comment="TP1 Short")
+    else
+        strategy.exit("Short SL", "Short", stop=shortStopLoss, comment="SL Short")
+
+// Short Scale-In Logic
+if shouldScaleInShort and strategy.position_size < 0 and shortPositionCount <= maxScaleIns
+    shortPositionCount := shortPositionCount + 1
+    lastShortScaleInPrice := close
+    
+    // Update average entry price
+    currentSize = math.abs(strategy.position_size)
+    avgShortEntry := ((avgShortEntry * currentSize) + (close * scaleInQty)) / (currentSize + scaleInQty)
+    
+    // Add to position
+    strategy.entry("Short", strategy.short, qty=scaleInQty, comment="Scale-In Short " + str.tostring(shortPositionCount))
+
+// Trailing Stop Logic for Long
+if strategy.position_size > 0 and enableTrailingStop
+    currentEntry = avgLongEntry
+    if not na(currentEntry)
+        profitMove = close - currentEntry
+        
+        // Activate trailing stop after TP1 or +2 ATR move
+        if not trailingStopActiveLong and (tp1HitLong or profitMove >= (atr * 2))
+            trailingStopActiveLong := true
+            
+        // Update trailing stop
+        if trailingStopActiveLong
+            trailingStopLevel = close - (atr * trailingStopAtrMult)
+            if na(longStopLoss) or trailingStopLevel > longStopLoss
+                longStopLoss := trailingStopLevel
+
+// Trailing Stop Logic for Short
+if strategy.position_size < 0 and enableTrailingStop
+    currentEntry = avgShortEntry
+    if not na(currentEntry)
+        profitMove = currentEntry - close
+        
+        // Activate trailing stop after TP1 or +2 ATR move
+        if not trailingStopActiveShort and (tp1HitShort or profitMove >= (atr * 2))
+            trailingStopActiveShort := true
+            
+        // Update trailing stop
+        if trailingStopActiveShort
+            trailingStopLevel = close + (atr * trailingStopAtrMult)
+            if na(shortStopLoss) or trailingStopLevel < shortStopLoss
+                shortStopLoss := trailingStopLevel
+
+// Exit Signal Logic
+if exit_long and strategy.position_size > 0
+    strategy.close("Long", comment="Exit Long Signal")
+    longPositionCount := 0
+    tp1HitLong := false
+    tp2HitLong := false
+    trailingStopActiveLong := false
+    
+if exit_short and strategy.position_size < 0
+    strategy.close("Short", comment="Exit Short Signal")
+    shortPositionCount := 0
+    tp1HitShort := false
+    tp2HitShort := false
+    trailingStopActiveShort := false
 
 // ============================================================================
 // VISUALIZATION
@@ -249,29 +504,92 @@ plotshape(short_entry, "Short Signal", shape.triangledown, location.abovebar,
           color.new(color.red, 0), size=size.small)
 
 // ============================================================================
-// ALERTS
+// ENHANCED ALERTS WITH COMPREHENSIVE INFORMATION
 // ============================================================================
 
-// Alert conditions
-alertcondition(long_entry, title="Long Entry Alert", 
-               message='{"action": "buy", "symbol": "{{ticker}}", "price": {{close}}, "regime": "' + 
-               (isTrending ? 'trending' : 'choppy') + '", "confirmations": ' + str.tostring(long_confirmations) + '}')
+// Calculate current P&L for alerts
+calcPnL(isLong) =>
+    pnl = 0.0
+    if isLong and not na(avgLongEntry)
+        pnl := ((close - avgLongEntry) / avgLongEntry) * 100
+    else if not isLong and not na(avgShortEntry)
+        pnl := ((avgShortEntry - close) / avgShortEntry) * 100
+    pnl
 
-alertcondition(short_entry, title="Short Entry Alert", 
-               message='{"action": "sell", "symbol": "{{ticker}}", "price": {{close}}, "regime": "' + 
-               (isTrending ? 'trending' : 'choppy') + '", "confirmations": ' + str.tostring(short_confirmations) + '}')
+// Long Entry Alert
+longEntryAlert = long_entry and strategy.position_size == 0
+if longEntryAlert
+    stopLoss = calcStopLoss(close, true)
+    stopDist = close - stopLoss
+    [tp1, tp2, tp3] = calcTakeProfitLevels(close, stopDist, true)
+    rrRatio = (tp1 - close) / stopDist
+    
+    alert('{"action": "BUY", "signal_type": "ENTRY", "direction": "LONG", "symbol": "' + syminfo.ticker + 
+          '", "price": ' + str.tostring(close) + ', "regime": "' + (isTrending ? 'trending' : 'choppy') + 
+          '", "confirmations": ' + str.tostring(long_confirmations) + ', "position_size": "' + str.tostring(initialPositionPct) + 
+          '%", "stop_loss": ' + str.tostring(stopLoss) + ', "take_profit_1": ' + str.tostring(tp1) + 
+          ', "take_profit_2": ' + str.tostring(tp2) + ', "take_profit_3": ' + str.tostring(tp3) + 
+          ', "risk_reward_ratio": ' + str.tostring(math.round(rrRatio, 2)) + ', "atr": ' + str.tostring(atr) + 
+          ', "timestamp": "{{time}}"}', alert.freq_once_per_bar)
 
-alertcondition(exit_long, title="Exit Long Alert", 
-               message='{"action": "exit_long", "symbol": "{{ticker}}", "price": {{close}}}')
+// Short Entry Alert
+shortEntryAlert = short_entry and strategy.position_size == 0
+if shortEntryAlert
+    stopLoss = calcStopLoss(close, false)
+    stopDist = stopLoss - close
+    [tp1, tp2, tp3] = calcTakeProfitLevels(close, stopDist, false)
+    rrRatio = (close - tp1) / stopDist
+    
+    alert('{"action": "SELL", "signal_type": "ENTRY", "direction": "SHORT", "symbol": "' + syminfo.ticker + 
+          '", "price": ' + str.tostring(close) + ', "regime": "' + (isTrending ? 'trending' : 'choppy') + 
+          '", "confirmations": ' + str.tostring(short_confirmations) + ', "position_size": "' + str.tostring(initialPositionPct) + 
+          '%", "stop_loss": ' + str.tostring(stopLoss) + ', "take_profit_1": ' + str.tostring(tp1) + 
+          ', "take_profit_2": ' + str.tostring(tp2) + ', "take_profit_3": ' + str.tostring(tp3) + 
+          ', "risk_reward_ratio": ' + str.tostring(math.round(rrRatio, 2)) + ', "atr": ' + str.tostring(atr) + 
+          ', "timestamp": "{{time}}"}', alert.freq_once_per_bar)
 
-alertcondition(exit_short, title="Exit Short Alert", 
-               message='{"action": "exit_short", "symbol": "{{ticker}}", "price": {{close}}}')
+// Scale-In Alert for Long
+if shouldScaleInLong and longPositionCount > 1
+    totalSize = initialPositionPct + ((longPositionCount - 1) * scaleInPct)
+    alert('{"action": "ADD", "signal_type": "SCALE_IN", "direction": "LONG", "symbol": "' + syminfo.ticker + 
+          '", "price": ' + str.tostring(close) + ', "position_number": ' + str.tostring(longPositionCount) + 
+          ', "scale_in_size": "' + str.tostring(scaleInPct) + '%", "total_position": "' + str.tostring(totalSize) + 
+          '%", "updated_avg_price": ' + str.tostring(avgLongEntry) + ', "updated_stop_loss": ' + str.tostring(longStopLoss) + 
+          ', "reason": "' + scaleInReasonLong + '"}', alert.freq_once_per_bar)
+
+// Scale-In Alert for Short
+if shouldScaleInShort and shortPositionCount > 1
+    totalSize = initialPositionPct + ((shortPositionCount - 1) * scaleInPct)
+    alert('{"action": "ADD", "signal_type": "SCALE_IN", "direction": "SHORT", "symbol": "' + syminfo.ticker + 
+          '", "price": ' + str.tostring(close) + ', "position_number": ' + str.tostring(shortPositionCount) + 
+          ', "scale_in_size": "' + str.tostring(scaleInPct) + '%", "total_position": "' + str.tostring(totalSize) + 
+          '%", "updated_avg_price": ' + str.tostring(avgShortEntry) + ', "updated_stop_loss": ' + str.tostring(shortStopLoss) + 
+          ', "reason": "' + scaleInReasonShort + '"}', alert.freq_once_per_bar)
+
+// Exit Signal Alerts
+if exit_long and strategy.position_size > 0
+    pnl = calcPnL(true)
+    exitReason = isTrending ? "EMA crossunder + MACD bearish" : "RSI overbought"
+    pnlStr = pnl >= 0 ? '"profit": "+' + str.tostring(math.round(pnl, 2)) + '%"' : '"loss": "' + str.tostring(math.round(pnl, 2)) + '%"'
+    
+    alert('{"action": "CLOSE", "signal_type": "EXIT_SIGNAL", "direction": "LONG", "symbol": "' + syminfo.ticker + 
+          '", "price": ' + str.tostring(close) + ', ' + pnlStr + ', "reason": "' + exitReason + 
+          '", "instruction": "CLOSE LONG POSITION"}', alert.freq_once_per_bar)
+
+if exit_short and strategy.position_size < 0
+    pnl = calcPnL(false)
+    exitReason = isTrending ? "EMA crossover + MACD bullish" : "RSI oversold"
+    pnlStr = pnl >= 0 ? '"profit": "+' + str.tostring(math.round(pnl, 2)) + '%"' : '"loss": "' + str.tostring(math.round(pnl, 2)) + '%"'
+    
+    alert('{"action": "CLOSE", "signal_type": "EXIT_SIGNAL", "direction": "SHORT", "symbol": "' + syminfo.ticker + 
+          '", "price": ' + str.tostring(close) + ', ' + pnlStr + ', "reason": "' + exitReason + 
+          '", "instruction": "CLOSE SHORT POSITION"}', alert.freq_once_per_bar)
 
 // ============================================================================
-// DASHBOARD - Display key metrics
+// ENHANCED DASHBOARD - Display key metrics with risk management
 // ============================================================================
 
-var table dashboard = table.new(position.top_right, 2, 8, 
+var table dashboard = table.new(position.top_right, 2, 13, 
                                 border_width=1, 
                                 border_color=color.gray, 
                                 frame_color=color.gray)
@@ -319,3 +637,60 @@ if barstate.islast
     table.cell(dashboard, 0, 7, "Long Confirms", bgcolor=color.new(color.gray, 90))
     table.cell(dashboard, 1, 7, str.tostring(long_confirmations) + "/5", 
                bgcolor=long_confirmations >= minConfirmations ? color.new(color.green, 80) : color.new(color.gray, 80))
+    
+    // Position Info
+    table.cell(dashboard, 0, 8, "Position", bgcolor=color.new(color.gray, 90))
+    pos_text = strategy.position_size > 0 ? "LONG" : (strategy.position_size < 0 ? "SHORT" : "None")
+    pos_color = strategy.position_size > 0 ? color.new(color.green, 80) : (strategy.position_size < 0 ? color.new(color.red, 80) : color.new(color.gray, 80))
+    table.cell(dashboard, 1, 8, pos_text, bgcolor=pos_color)
+    
+    // Entry Price & P&L
+    table.cell(dashboard, 0, 9, "Entry & P&L", bgcolor=color.new(color.gray, 90))
+    if strategy.position_size > 0
+        entryPrice = not na(avgLongEntry) ? avgLongEntry : strategy.position_avg_price
+        currentPnL = ((close - entryPrice) / entryPrice) * 100
+        pnl_text = str.tostring(math.round(entryPrice, 2)) + " (" + (currentPnL >= 0 ? "+" : "") + str.tostring(math.round(currentPnL, 2)) + "%)"
+        pnl_color = currentPnL >= 0 ? color.new(color.green, 80) : color.new(color.red, 80)
+        table.cell(dashboard, 1, 9, pnl_text, bgcolor=pnl_color)
+    else if strategy.position_size < 0
+        entryPrice = not na(avgShortEntry) ? avgShortEntry : strategy.position_avg_price
+        currentPnL = ((entryPrice - close) / entryPrice) * 100
+        pnl_text = str.tostring(math.round(entryPrice, 2)) + " (" + (currentPnL >= 0 ? "+" : "") + str.tostring(math.round(currentPnL, 2)) + "%)"
+        pnl_color = currentPnL >= 0 ? color.new(color.green, 80) : color.new(color.red, 80)
+        table.cell(dashboard, 1, 9, pnl_text, bgcolor=pnl_color)
+    else
+        table.cell(dashboard, 1, 9, "N/A", bgcolor=color.new(color.gray, 80))
+    
+    // Stop Loss Level
+    table.cell(dashboard, 0, 10, "Stop Loss", bgcolor=color.new(color.gray, 90))
+    if strategy.position_size > 0 and not na(longStopLoss)
+        sl_text = str.tostring(math.round(longStopLoss, 2)) + (trailingStopActiveLong ? " (Trail)" : "")
+        table.cell(dashboard, 1, 10, sl_text, bgcolor=color.new(color.red, 80))
+    else if strategy.position_size < 0 and not na(shortStopLoss)
+        sl_text = str.tostring(math.round(shortStopLoss, 2)) + (trailingStopActiveShort ? " (Trail)" : "")
+        table.cell(dashboard, 1, 10, sl_text, bgcolor=color.new(color.red, 80))
+    else
+        table.cell(dashboard, 1, 10, "N/A", bgcolor=color.new(color.gray, 80))
+    
+    // Next Take Profit
+    table.cell(dashboard, 0, 11, "Next TP", bgcolor=color.new(color.gray, 90))
+    if strategy.position_size > 0
+        stopDist = close - longStopLoss
+        [tp1, tp2, tp3] = calcTakeProfitLevels(avgLongEntry, stopDist, true)
+        nextTP = not tp1HitLong ? tp1 : (not tp2HitLong ? tp2 : tp3)
+        tp_text = str.tostring(math.round(nextTP, 2))
+        table.cell(dashboard, 1, 11, tp_text, bgcolor=color.new(color.green, 80))
+    else if strategy.position_size < 0
+        stopDist = shortStopLoss - close
+        [tp1, tp2, tp3] = calcTakeProfitLevels(avgShortEntry, stopDist, false)
+        nextTP = not tp1HitShort ? tp1 : (not tp2HitShort ? tp2 : tp3)
+        tp_text = str.tostring(math.round(nextTP, 2))
+        table.cell(dashboard, 1, 11, tp_text, bgcolor=color.new(color.green, 80))
+    else
+        table.cell(dashboard, 1, 11, "N/A", bgcolor=color.new(color.gray, 80))
+    
+    // Position Count (Pyramiding)
+    table.cell(dashboard, 0, 12, "Scale Count", bgcolor=color.new(color.gray, 90))
+    posCount = strategy.position_size > 0 ? longPositionCount : (strategy.position_size < 0 ? shortPositionCount : 0)
+    count_text = str.tostring(posCount) + "/" + str.tostring(maxScaleIns + 1)
+    table.cell(dashboard, 1, 12, count_text, bgcolor=color.new(color.gray, 80))
